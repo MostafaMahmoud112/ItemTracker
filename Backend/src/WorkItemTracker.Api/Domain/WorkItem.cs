@@ -4,7 +4,7 @@ namespace WorkItemTracker.Api.Domain;
 
 public class WorkItem
 {
-    // Surrogate PK; assigned by the database on insert.
+    // DB assigns this on insert — clients never send it.
     public int Id { get; private set; }
 
     public string Title { get; private set; } = string.Empty;
@@ -15,7 +15,7 @@ public class WorkItem
 
     public DateTime CreatedAt { get; private set; }
 
-    // EF Core materialization
+    // Parameterless ctor is just for EF when it materializes rows.
     private WorkItem()
     {
     }
@@ -39,7 +39,7 @@ public class WorkItem
         };
     }
 
-    // Only Todo → InProgress → Done; anything else is a conflict.
+    // Status only moves forward: Todo -> InProgress -> Done. Everything else is a conflict.
     public void ChangeStatus(WorkItemStatus newStatus)
     {
         var isAllowed = Status switch

@@ -1,35 +1,42 @@
 # Work Item Tracker
 
-ASP.NET Core 8 API and Angular 22 UI for work items that move `Todo → InProgress → Done`.
+Lean full-stack take-home: ASP.NET Core 8 API + Angular 22 UI for creating, listing, filtering, and advancing work items through `Todo → InProgress → Done`.
 
 ```
-Backend/   API, EF Core, SQLite, xUnit
-Frontend/  Angular app (proxies /api to the API)
+Backend/     ASP.NET Core API, EF Core, SQLite, xUnit tests
+Frontend/    Angular standalone app (proxies /api → the API)
 ```
 
-Commands below assume the **repository root**.
+---
 
 ## Prerequisites
 
-- .NET 8 SDK
-- Node.js 20+ and npm
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (ASP.NET Core 8 runtime included with the SDK)
+- [Node.js](https://nodejs.org/) 20+ (22/24 also fine) and npm
+- A modern browser for the UI
+
+All commands below are run from the **repository root** unless noted.
+
+---
 
 ## Run the API
 
-Stop anything already using port 5209.
+> From the **repository root**. Stop any existing process on port `5209` first if the port is busy.
 
 ```bash
 dotnet run --project Backend/src/WorkItemTracker.Api --launch-profile http
 ```
 
-- `http://localhost:5209`
-- Swagger (Development): `http://localhost:5209/swagger`
-- SQLite file: `Backend/src/WorkItemTracker.Api/workitems.db`
-- Migrations run on startup in Development
+- URL: `http://localhost:5209`
+- Swagger UI (Development): `http://localhost:5209/swagger`
+- SQLite file is created at `Backend/src/WorkItemTracker.Api/workitems.db` (content root)
+- EF migrations are applied automatically on startup in **Development**
+
+---
 
 ## Run Angular
 
-Stop anything already using port 4200.
+In a second terminal (from the repository root). Stop any existing process on port `4200` first if the port is busy.
 
 ```bash
 cd Frontend
@@ -37,39 +44,68 @@ npm install
 npm start
 ```
 
-- `http://localhost:4200`
-- `/api` is proxied to `http://localhost:5209`
+- URL: `http://localhost:4200`
+- `proxy.conf.json` forwards `/api` → `http://localhost:5209`
 
-## Tests
+---
+
+## Run all tests
+
+### Backend
 
 ```bash
-dotnet build Backend/WorkItemTracker.sln
 dotnet test Backend/WorkItemTracker.sln
 ```
+
+### Frontend
 
 ```bash
 cd Frontend
 npm install
-npm run build
 npx ng test --watch=false
 ```
 
+### Frontend production build
+
+```bash
+cd Frontend
+npm run build
+```
+
+### Backend build only
+
+```bash
+dotnet build Backend/WorkItemTracker.sln
+```
+
+---
+
 ## API summary
 
-Base: `/api/work-items`. Status values are strings: `Todo`, `InProgress`, `Done`.
+Base path: `/api/work-items`  
+Enums serialize as strings: `"Todo" | "InProgress" | "Done"`.
 
 ### POST `/api/work-items`
 
-Creates an item in `Todo`. Status cannot be set by the client.
+Creates an item in `Todo`. Clients cannot set status.
+
+**Request**
 
 ```http
 POST /api/work-items
 Content-Type: application/json
 
-{ "title": "  Ship README  ", "description": "Finalize submission" }
+{
+  "title": "  Ship README  ",
+  "description": "Finalize submission"
+}
 ```
 
-`201` + `Location: /api/work-items/{id}`:
+**Response `201 Created`**
+
+```http
+Location: /api/work-items/1
+```
 
 ```json
 {
@@ -81,7 +117,7 @@ Content-Type: application/json
 }
 ```
 
-`400` ProblemDetails (empty title, title > 120, bad body), example:
+**Response `400` (ProblemDetails)** — empty/whitespace title, title longer than 120, malformed body:
 
 ```json
 {
@@ -93,19 +129,29 @@ Content-Type: application/json
 }
 ```
 
-Model binding failures may return `ValidationProblemDetails` with an `errors` map (still 400 / problem+json).
+Model-validation failures may instead return `ValidationProblemDetails` with an `errors` object (still `application/problem+json`, status 400).
 
 ### GET `/api/work-items`
 
-Query: `search`, `status`, `page` (default 1), `pageSize` (default 10, max 100).
+Query: `search`, `status`, `page` (default `1`), `pageSize` (default `10`, max `100`).
 
 ```http
 GET /api/work-items?search=readme&status=Todo&page=1&pageSize=10
 ```
 
+**Response `200`**
+
 ```json
 {
-  "items": [ { "id": 1, "title": "Ship README", "description": "Finalize submission", "status": "Todo", "createdAt": "2026-09-20T12:00:00.0000000Z" } ],
+  "items": [
+    {
+      "id": 1,
+      "title": "Ship README",
+      "description": "Finalize submission",
+      "status": "Todo",
+      "createdAt": "2026-09-20T12:00:00.0000000Z"
+    }
+  ],
   "page": 1,
   "pageSize": 10,
   "totalCount": 1,
@@ -113,11 +159,11 @@ GET /api/work-items?search=readme&status=Todo&page=1&pageSize=10
 }
 ```
 
-`400` if `page < 1` or `pageSize` not in 1–100.
+**Response `400`** — `page < 1` or `pageSize` outside 1–100.
 
 ### PATCH `/api/work-items/{id}/status`
 
-Allowed: `Todo → InProgress → Done` only.
+Allowed transitions only: `Todo → InProgress → Done`.
 
 ```http
 PATCH /api/work-items/1/status
@@ -126,9 +172,9 @@ Content-Type: application/json
 { "status": "InProgress" }
 ```
 
-`200` returns the updated item.
+**Response `200`** — updated item.
 
-`404`:
+**Response `404`**
 
 ```json
 {
@@ -140,7 +186,7 @@ Content-Type: application/json
 }
 ```
 
-`409` for invalid transitions (same status, skip, or backwards):
+**Response `409`** — invalid transition (same status, skip, or backwards), including PATCH to the current status:
 
 ```json
 {
@@ -152,53 +198,84 @@ Content-Type: application/json
 }
 ```
 
-`400` for unknown status values (`"abc"`, `99`), missing body, or malformed JSON.
+**Response `400`** — unknown status string/number (e.g. `"abc"`, `99`), missing body, malformed JSON.
+
+---
 
 ## Assumptions
 
+Derived from the implemented code:
+
 | Topic | Behavior |
 | --- | --- |
-| Id | `int`, DB-generated; clients do not supply it |
-| Sort | `CreatedAt` desc, then `Id` desc |
-| Pagination | Default page 1, pageSize 10; max pageSize 100; empty list → totalPages 0 |
-| Search | Optional case-insensitive contains on title (trimmed) |
-| Status filter | Optional exact match; omitted / UI "All" = no filter |
-| Title | Required, trimmed, max 120 after trim; whitespace-only rejected |
-| Description | Optional, trimmed; whitespace-only stored as null |
-| Create status | Always Todo |
-| Same-status PATCH | 409 |
-| Edit / delete | Not implemented |
-| Timestamps | `CreatedAt` is UTC at create |
-| Migrations | Applied on startup in Development only |
-| SQLite path | `Data Source=workitems.db` under the API content root |
-| CORS | `http://localhost:4200` |
-| Enums in JSON | Strings only |
+| **Id** | `int` surrogate key, DB-generated; clients never supply it |
+| **Sort** | `CreatedAt` descending, then `Id` descending |
+| **Pagination** | Default `page=1`, `pageSize=10`; max `pageSize=100`; empty list → `totalPages=0` |
+| **Search** | Optional; case-insensitive **contains** on **title** only (trimmed) |
+| **Status filter** | Optional exact match; omit / UI “All” means no status filter |
+| **Title** | Required; trimmed; max 120 after trim; whitespace-only rejected |
+| **Description** | Optional; trimmed; whitespace-only stored as `null` |
+| **Create status** | Always `Todo`; not accepted from the client |
+| **Same-status PATCH** | Returns **409** (not 200 / no-op) |
+| **Edit / delete** | Not implemented (no endpoints) |
+| **Timestamps** | `CreatedAt` is UTC (`DateTime.UtcNow` at create) |
+| **Migrations** | `Database.MigrateAsync()` on startup in **Development** only |
+| **SQLite path** | `ConnectionStrings:Default` = `Data Source=workitems.db` → file under the API content root (`Backend/src/WorkItemTracker.Api/`) |
+| **CORS** | Allows `http://localhost:4200` |
+| **Enums in JSON** | Strings only (`allowIntegerValues: false`) |
+
+---
 
 ## Design decisions
 
-**Transition rule on the entity.** `WorkItem.ChangeStatus` owns the graph and throws `InvalidStatusTransitionException`, so the rule stays in one place and is unit-testable without HTTP or EF.
+### Transition rule on the domain entity
 
-**switchMap for list queries.** Search, status, page, and refresh feed one stream. `switchMap` cancels the previous HTTP call so a slow older response cannot overwrite a newer result.
+`WorkItem.ChangeStatus` owns the allowed graph and throws `InvalidStatusTransitionException`. Keeping the rule on the entity prevents controllers/services from drifting into inconsistent checks and makes the rule easy to unit-test without HTTP or EF.
 
-**Real SQLite in tests.** EF InMemory is not a faithful stand-in. Tests use a unique temp `.db` per fixture, including a host-restart persistence check on the same file.
+### `switchMap` for stale-response protection
 
-**PATCH concurrency.** Each request loads the row, applies `ChangeStatus`, and saves. There is no concurrency token. Concurrent requests see committed state at read time; invalid transitions still return 409; valid overlapping updates are last-write-wins.
+The Angular list is driven by one stream of `(search, status, page, refresh)`. `switchMap` cancels the previous in-flight HTTP call when a newer query arrives, so a slow older response cannot overwrite a newer UI state.
+
+### Real SQLite in API tests (not EF InMemory)
+
+InMemory does not behave like a relational store (constraints, SQL translation, persistence). Tests use a unique temp `.db` per fixture/class, including a restart/persistence test on the same file, which matches production SQLite usage.
+
+### PATCH concurrency (current approach)
+
+Each PATCH loads the entity, applies `ChangeStatus`, and saves. There is **no** concurrency token (`RowVersion` / ETag). Under concurrent requests:
+
+- Each request sees whatever is committed when it reads.
+- Invalid transitions still fail with 409 based on that fresh read.
+- Valid concurrent updates are last-write-wins; two overlapping valid transitions are not detected as conflicts beyond the domain rule.
+
+This is honest and adequate for the take-home scope; a concurrency token would be the next hardening step.
+
+---
 
 ## What I would do next
 
-- RowVersion / optimistic concurrency → 409 on conflict
-- Auth
-- Docker and an explicit migrate step outside Development
-- CI for `dotnet test` and `ng test` / `ng build`
-- Browser e2e (create → filter → advance → 409)
-- SQL Server for deployed environments
+- Optimistic concurrency (`RowVersion` + `DbUpdateConcurrencyException` → 409)
+- Authentication / authorization
+- Docker Compose (API + optionally SQL Server) and a non-Development migration story
+- CI pipeline (`dotnet test` + `ng test` / `ng build` on PR)
+- Playwright/Cypress e2e covering create → filter → advance → 409
+- Swap SQLite for SQL Server in deployed environments while keeping SQLite for local/dev if desired
 
-## Known limitations
+---
 
-- No edit/delete APIs or UI
-- No auth, Docker, or CI in the repo
-- No browser e2e (unit/integration only)
-- Frontend lives in `Frontend/` (not `/client`); Angular 22 default test runner is Vitest
-- Auto-migrate only in Development
-- Per-item advancing state is an in-memory `Set`
-- No GET-by-id; create `Location` still uses `/api/work-items/{id}`
+## Known limitations / unfinished work
+
+- No update-title/description or delete APIs/UI
+- No auth, rate limiting, or HTTPS-only deployment setup
+- No Docker/CI config in the repo
+- No browser e2e suite (unit/integration only)
+- Frontend folder is `Frontend/` (not `/client`); test runner is the Angular 22 default (**Vitest**), not Karma/ChromeHeadless
+- Migrations auto-apply only in Development; other environments need an explicit migrate step
+- List “advancing” state uses an in-memory `Set` (fine under Zone.js; not a signal-driven UI)
+- No dedicated GET-by-id endpoint (create `Location` still points at `/api/work-items/{id}`)
+
+---
+
+## License
+
+Take-home assessment sample; no license file included.

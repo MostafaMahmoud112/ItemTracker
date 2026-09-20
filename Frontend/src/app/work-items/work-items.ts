@@ -1,5 +1,5 @@
-import { AsyncPipe, DatePipe } from '@angular/common';
-import { Component, DestroyRef, inject } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { Component, DestroyRef, ElementRef, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BehaviorSubject, Observable, combineLatest, of } from 'rxjs';
@@ -13,8 +13,10 @@ import {
   switchMap,
   tap,
 } from 'rxjs/operators';
+import { IconComponent } from '../icons/icon';
 import { PagedResult, WorkItem, WorkItemStatus } from '../models/work-item.model';
 import { WorkItemService } from '../services/work-item.service';
+import { ThemeService } from '../theme/theme.service';
 
 export type ListViewState =
   | { kind: 'loading' }
@@ -23,7 +25,7 @@ export type ListViewState =
 
 @Component({
   selector: 'app-work-items',
-  imports: [ReactiveFormsModule, AsyncPipe, DatePipe],
+  imports: [ReactiveFormsModule, AsyncPipe, IconComponent],
   templateUrl: './work-items.html',
   styleUrl: './work-items.scss',
 })
@@ -31,9 +33,18 @@ export class WorkItemsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly workItemsApi = inject(WorkItemService);
   private readonly destroyRef = inject(DestroyRef);
+  readonly theme = inject(ThemeService);
+
+  @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
 
   readonly titleMaxLength = 120;
   readonly pageSize = 10;
+  readonly statusOptions: Array<{ value: 'All' | WorkItemStatus; label: string }> = [
+    { value: 'All', label: 'All' },
+    { value: 'Todo', label: 'Todo' },
+    { value: 'InProgress', label: 'In Progress' },
+    { value: 'Done', label: 'Done' },
+  ];
 
   readonly createForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(this.titleMaxLength)]],
@@ -45,12 +56,13 @@ export class WorkItemsComponent {
 
   private readonly page$ = new BehaviorSubject<number>(1);
   private readonly refresh$ = new BehaviorSubject<number>(0);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly listState$: Observable<ListViewState> = combineLatest([
     this.searchControl.valueChanges.pipe(
       debounceTime(300),
       distinctUntilChanged(),
-      // Emit the current value immediately; only subsequent keystrokes are debounced.
+      // startWith so the first load doesn't wait on the debounce; only typing is delayed.
       startWith(this.searchControl.value),
       tap(() => this.page$.next(1)),
     ),
@@ -62,8 +74,8 @@ export class WorkItemsComponent {
     this.page$,
     this.refresh$,
   ]).pipe(
-    // switchMap cancels the previous in-flight list request whenever search/status/page/refresh
-    // changes, so a slower older response can never overwrite a newer one (stale protection).
+    // switchMap cancels the in-flight list call when filters change, so an older
+    // slow response can't overwrite what the user just asked for.
     switchMap(([search, status, page]) => {
       const statusFilter = status === 'All' ? null : status;
       const filtersActive = Boolean(search.trim()) || statusFilter !== null;
@@ -76,11 +88,13 @@ export class WorkItemsComponent {
           pageSize: this.pageSize,
         })
         .pipe(
-          map((result): ListViewState => ({
-            kind: 'success',
-            result,
-            filtersActive,
-          })),
+          map(
+            (result): ListViewState => ({
+              kind: 'success',
+              result,
+              filtersActive,
+            }),
+          ),
           startWith({ kind: 'loading' } satisfies ListViewState),
           catchError((error: Error) =>
             of({ kind: 'error', message: error.message } satisfies ListViewState),
@@ -90,7 +104,7 @@ export class WorkItemsComponent {
   );
 
   createError: string | null = null;
-  actionError: string | null = null;
+  toastMessage: string | null = null;
   submitting = false;
   readonly advancingIds = new Set<number>();
 
@@ -98,6 +112,9 @@ export class WorkItemsComponent {
     this.destroyRef.onDestroy(() => {
       this.page$.complete();
       this.refresh$.complete();
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
     });
   }
 
@@ -107,6 +124,17 @@ export class WorkItemsComponent {
 
   get remainingTitleChars(): number {
     return this.titleMaxLength - (this.titleControl.value?.length ?? 0);
+  }
+
+  get titleCounterTone(): 'ok' | 'warn' | 'danger' {
+    const remaining = this.remainingTitleChars;
+    if (remaining <= 10) {
+      return 'danger';
+    }
+    if (remaining <= 30) {
+      return 'warn';
+    }
+    return 'ok';
   }
 
   isAdvancing(id: number): boolean {
@@ -122,6 +150,47 @@ export class WorkItemsComponent {
       default:
         return null;
     }
+  }
+
+  progressStep(status: WorkItemStatus): number {
+    switch (status) {
+      case 'Todo':
+        return 1;
+      case 'InProgress':
+        return 2;
+      case 'Done':
+        return 3;
+    }
+  }
+
+  formatCreatedAt(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+      return iso;
+    }
+
+    const diffMs = Date.now() - date.getTime();
+    const mins = Math.floor(diffMs / 60_000);
+    if (mins < 1) {
+      return 'Just now';
+    }
+    if (mins < 60) {
+      return `${mins}m ago`;
+    }
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) {
+      return `${hours}h ago`;
+    }
+    const days = Math.floor(hours / 24);
+    if (days < 7) {
+      return `${days}d ago`;
+    }
+
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   onSubmit(): void {
@@ -165,7 +234,6 @@ export class WorkItemsComponent {
       return;
     }
 
-    this.actionError = null;
     this.advancingIds.add(item.id);
 
     this.workItemsApi
@@ -179,15 +247,48 @@ export class WorkItemsComponent {
       .subscribe({
         next: () => this.refreshList(),
         error: (error: Error & { status?: number }) => {
+          this.showToast(error.message);
           if (error.status === 409 || error.status === 404) {
-            this.actionError = error.message;
             this.refreshList();
-            return;
           }
-
-          this.actionError = error.message;
         },
       });
+  }
+
+  clearSearch(): void {
+    this.searchControl.setValue('');
+  }
+
+  clearFilters(): void {
+    this.searchControl.setValue('');
+    this.statusControl.setValue('All');
+  }
+
+  focusTitleInput(): void {
+    this.titleInput?.nativeElement.focus();
+  }
+
+  setStatus(value: 'All' | WorkItemStatus): void {
+    this.statusControl.setValue(value);
+  }
+
+  showToast(message: string): void {
+    this.toastMessage = message;
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = null;
+      this.toastTimer = null;
+    }, 4000);
+  }
+
+  dismissToast(): void {
+    this.toastMessage = null;
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+      this.toastTimer = null;
+    }
   }
 
   goToPreviousPage(): void {

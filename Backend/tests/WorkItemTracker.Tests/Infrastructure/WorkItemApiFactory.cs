@@ -28,6 +28,8 @@ public sealed class WorkItemApiFactory : WebApplicationFactory<Program>, IAsyncL
 
     public string ConnectionString { get; }
 
+    public string DbPath => _dbPath;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
