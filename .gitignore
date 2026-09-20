@@ -1,0 +1,16 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.db
+*.db-shm
+*.db-wal
+appsettings.*.local.json
+TestResults/
+*.log
+.idea/
+*.DotSettings.user
