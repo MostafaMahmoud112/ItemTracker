@@ -14,6 +14,8 @@ import {
   tap,
 } from 'rxjs/operators';
 import { IconComponent } from '../icons/icon';
+import { I18nService, TranslationKey } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { PagedResult, WorkItem, WorkItemStatus } from '../models/work-item.model';
 import { WorkItemService } from '../services/work-item.service';
 import { ThemeService } from '../theme/theme.service';
@@ -25,7 +27,7 @@ export type ListViewState =
 
 @Component({
   selector: 'app-work-items',
-  imports: [ReactiveFormsModule, AsyncPipe, IconComponent],
+  imports: [ReactiveFormsModule, AsyncPipe, IconComponent, TranslatePipe],
   templateUrl: './work-items.html',
   styleUrl: './work-items.scss',
 })
@@ -34,16 +36,17 @@ export class WorkItemsComponent {
   private readonly workItemsApi = inject(WorkItemService);
   private readonly destroyRef = inject(DestroyRef);
   readonly theme = inject(ThemeService);
+  readonly i18n = inject(I18nService);
 
   @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
 
   readonly titleMaxLength = 120;
   readonly pageSize = 10;
-  readonly statusOptions: Array<{ value: 'All' | WorkItemStatus; label: string }> = [
-    { value: 'All', label: 'All' },
-    { value: 'Todo', label: 'Todo' },
-    { value: 'InProgress', label: 'In Progress' },
-    { value: 'Done', label: 'Done' },
+  readonly statusOptions: Array<{ value: 'All' | WorkItemStatus; labelKey: TranslationKey }> = [
+    { value: 'All', labelKey: 'statusAll' },
+    { value: 'Todo', labelKey: 'statusTodo' },
+    { value: 'InProgress', labelKey: 'statusInProgress' },
+    { value: 'Done', labelKey: 'statusDone' },
   ];
 
   readonly createForm = this.fb.nonNullable.group({
@@ -152,6 +155,28 @@ export class WorkItemsComponent {
     }
   }
 
+  actionLabelKey(status: WorkItemStatus): TranslationKey | null {
+    switch (status) {
+      case 'Todo':
+        return 'start';
+      case 'InProgress':
+        return 'complete';
+      default:
+        return null;
+    }
+  }
+
+  statusLabelKey(status: WorkItemStatus): TranslationKey {
+    switch (status) {
+      case 'Todo':
+        return 'statusTodo';
+      case 'InProgress':
+        return 'statusInProgress';
+      case 'Done':
+        return 'statusDone';
+    }
+  }
+
   progressStep(status: WorkItemStatus): number {
     switch (status) {
       case 'Todo':
@@ -172,21 +197,21 @@ export class WorkItemsComponent {
     const diffMs = Date.now() - date.getTime();
     const mins = Math.floor(diffMs / 60_000);
     if (mins < 1) {
-      return 'Just now';
+      return this.i18n.t('justNow');
     }
     if (mins < 60) {
-      return `${mins}m ago`;
+      return this.i18n.t('minutesAgo', { n: mins });
     }
     const hours = Math.floor(mins / 60);
     if (hours < 24) {
-      return `${hours}h ago`;
+      return this.i18n.t('hoursAgo', { n: hours });
     }
     const days = Math.floor(hours / 24);
     if (days < 7) {
-      return `${days}d ago`;
+      return this.i18n.t('daysAgo', { n: days });
     }
 
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(this.i18n.locale() === 'ar' ? 'ar' : 'en', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

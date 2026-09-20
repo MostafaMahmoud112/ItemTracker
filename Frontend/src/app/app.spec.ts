@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { App } from './app';
+import { I18nService } from './i18n/i18n.service';
 import { WorkItemService } from './services/work-item.service';
 
 describe('App', () => {
@@ -21,6 +22,8 @@ describe('App', () => {
         },
       ],
     }).compileComponents();
+
+    TestBed.inject(I18nService).setLocale('en');
   });
 
   it('should create the app', () => {

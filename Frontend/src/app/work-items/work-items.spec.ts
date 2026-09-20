@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Observable, of, throwError, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { I18nService } from '../i18n/i18n.service';
 import { PagedResult, WorkItem } from '../models/work-item.model';
 import { WorkItemService } from '../services/work-item.service';
 import { WorkItemsComponent } from './work-items';
@@ -46,6 +47,7 @@ describe('WorkItemsComponent', () => {
       ],
     }).compileComponents();
 
+    TestBed.inject(I18nService).setLocale('en');
     fixture = TestBed.createComponent(WorkItemsComponent);
     component = fixture.componentInstance;
   });
