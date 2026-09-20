@@ -64,6 +64,10 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 StatusCodes.Status409Conflict,
                 "Conflict",
                 ex.Message),
+            ConcurrencyConflictException ex => (
+                StatusCodes.Status409Conflict,
+                "Conflict",
+                ex.Message),
             ValidationException ex => (
                 StatusCodes.Status400BadRequest,
                 "Bad Request",

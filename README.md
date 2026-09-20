@@ -95,6 +95,14 @@ Content-Type: application/json
 
 Model binding failures may return `ValidationProblemDetails` with an `errors` map (still 400 / problem+json).
 
+### GET `/api/work-items/{id}`
+
+Returns a single item. `404` ProblemDetails if missing.
+
+```http
+GET /api/work-items/1
+```
+
 ### GET `/api/work-items`
 
 Query: `search`, `status`, `page` (default 1), `pageSize` (default 10, max 100).
@@ -140,7 +148,7 @@ Content-Type: application/json
 }
 ```
 
-`409` for invalid transitions (same status, skip, or backwards):
+`409` for invalid transitions (same status, skip, or backwards), or when another request already changed the status (conditional update matched no row):
 
 ```json
 {
@@ -182,11 +190,18 @@ Content-Type: application/json
 
 **Real SQLite in tests.** EF InMemory is not a faithful stand-in. Tests use a unique temp `.db` per fixture, including a host-restart persistence check on the same file.
 
-**PATCH concurrency.** Each request loads the row, applies `ChangeStatus`, and saves. There is no concurrency token. Concurrent requests see committed state at read time; invalid transitions still return 409; valid overlapping updates are last-write-wins.
+**PATCH concurrency.** After `ChangeStatus` validates the transition against the status that was read, the write is a conditional `UPDATE … WHERE Id = @id AND Status = @expected`. If another request already changed the row, zero rows are updated and the API returns `409` with a clear conflict message (reload and retry). Invalid transitions still return `409` from the entity rule.
+
+## Test coverage
+
+| Area | What’s covered |
+| --- | --- |
+| Domain | Valid and invalid `ChangeStatus` transitions (unit) |
+| API | Create (201 + Location), validation 400s, list filters/pagination, GET by id via Location, PATCH success / invalid / missing / concurrent stale update |
+| Persistence | Real SQLite; data survives host restart on the same file |
 
 ## What I would do next
 
-- RowVersion / optimistic concurrency → 409 on conflict
 - Auth
 - Docker and an explicit migrate step outside Development
 - CI for `dotnet test` and `ng test` / `ng build`
@@ -198,7 +213,4 @@ Content-Type: application/json
 - No edit/delete APIs or UI
 - No auth, Docker, or CI in the repo
 - No browser e2e (unit/integration only)
-- Frontend lives in `Frontend/` (not `/client`); Angular 22 default test runner is Vitest
 - Auto-migrate only in Development
-- Per-item advancing state is an in-memory `Set`
-- No GET-by-id; create `Location` still uses `/api/work-items/{id}`

@@ -50,6 +50,15 @@ public sealed class WorkItemsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(WorkItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<WorkItemResponse>> GetById(int id, CancellationToken cancellationToken)
+    {
+        var item = await _workItemService.GetByIdAsync(id, cancellationToken);
+        return Ok(item);
+    }
+
     [HttpPatch("{id:int}/status")]
     [ProducesResponseType(typeof(WorkItemResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

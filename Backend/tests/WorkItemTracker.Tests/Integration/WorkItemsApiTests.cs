@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using WorkItemTracker.Api.Domain;
 using WorkItemTracker.Api.Dtos;
 using WorkItemTracker.Tests.Infrastructure;
@@ -40,6 +42,36 @@ public sealed class WorkItemsApiTests : IClassFixture<WorkItemApiFactory>
         Assert.Equal("Trim me", body.Title);
         Assert.Equal(WorkItemStatus.Todo, body.Status);
         Assert.True(body.Id > 0);
+    }
+
+    [Fact]
+    public async Task GetById_ExistingItem_Returns200AndMatchesCreateLocation()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/work-items", new
+        {
+            title = "Locate me",
+            description = "Via Location header"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.NotNull(createResponse.Headers.Location);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
+        Assert.NotNull(created);
+
+        var location = createResponse.Headers.Location!;
+        var path = location.IsAbsoluteUri ? location.PathAndQuery : location.OriginalString;
+        Assert.Equal($"/api/work-items/{created.Id}", path);
+
+        var getResponse = await _client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        var fetched = await getResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
+        Assert.NotNull(fetched);
+        Assert.Equal(created.Id, fetched.Id);
+        Assert.Equal("Locate me", fetched.Title);
+        Assert.Equal("Via Location header", fetched.Description);
+        Assert.Equal(WorkItemStatus.Todo, fetched.Status);
     }
 
     [Theory]
@@ -91,6 +123,30 @@ public sealed class WorkItemsApiTests : IClassFixture<WorkItemApiFactory>
         var response = await PatchJsonAsync("/api/work-items/999999/status", new { status = "InProgress" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PatchStatus_StaleConcurrentUpdate_Returns409()
+    {
+        var created = await CreateAsync("Concurrent race");
+
+        var first = PatchJsonAsync($"/api/work-items/{created.Id}/status", new { status = "InProgress" });
+        var second = PatchJsonAsync($"/api/work-items/{created.Id}/status", new { status = "InProgress" });
+        var results = await Task.WhenAll(first, second);
+
+        var statusCodes = results.Select(r => r.StatusCode).ToArray();
+        Assert.Contains(HttpStatusCode.OK, statusCodes);
+        Assert.Contains(HttpStatusCode.Conflict, statusCodes);
+
+        var conflict = results.Single(r => r.StatusCode == HttpStatusCode.Conflict);
+        var problem = await conflict.Content.ReadFromJsonAsync<ProblemDetails>(JsonOptions);
+        Assert.Equal(StatusCodes.Status409Conflict, problem!.Status);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
+
+        var getResponse = await _client.GetAsync($"/api/work-items/{created.Id}");
+        getResponse.EnsureSuccessStatusCode();
+        var current = await getResponse.Content.ReadFromJsonAsync<WorkItemResponse>(JsonOptions);
+        Assert.Equal(WorkItemStatus.InProgress, current!.Status);
     }
 
     [Theory]

@@ -35,6 +35,15 @@ public sealed class WorkItemService : IWorkItemService
         return Map(entity);
     }
 
+    public async Task<WorkItemResponse> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        var entity = await _db.WorkItems.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+            ?? throw new NotFoundException($"Work item with id '{id}' was not found.");
+
+        return Map(entity);
+    }
+
     public async Task<PagedResult<WorkItemResponse>> GetAsync(WorkItemQuery query, CancellationToken cancellationToken)
     {
         if (query.Page < 1)
@@ -95,11 +104,35 @@ public sealed class WorkItemService : IWorkItemService
             throw new ValidationException($"Status '{status}' is not a recognized value.");
         }
 
-        var entity = await _db.WorkItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+        // Read without tracking — ChangeStatus validates the rule; the write is a conditional UPDATE.
+        var entity = await _db.WorkItems.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new NotFoundException($"Work item with id '{id}' was not found.");
 
+        var expectedCurrentStatus = entity.Status;
         entity.ChangeStatus(status);
-        await _db.SaveChangesAsync(cancellationToken);
+
+        // Value-converter enums are unreliable in ExecuteUpdate WHERE clauses on SQLite;
+        // use a parameterized conditional UPDATE so the Status predicate is always applied.
+        var expected = expectedCurrentStatus.ToString();
+        var next = status.ToString();
+        var affected = await _db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE WorkItems SET Status = {next} WHERE Id = {id} AND Status = {expected}",
+            cancellationToken);
+
+        if (affected == 0)
+        {
+            var stillExists = await _db.WorkItems.AsNoTracking()
+                .AnyAsync(x => x.Id == id, cancellationToken);
+
+            if (!stillExists)
+            {
+                throw new NotFoundException($"Work item with id '{id}' was not found.");
+            }
+
+            throw new ConcurrencyConflictException(
+                $"Work item '{id}' was modified by another request. Reload the item and try again.");
+        }
 
         return Map(entity);
     }
