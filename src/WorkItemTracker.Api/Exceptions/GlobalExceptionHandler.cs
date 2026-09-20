@@ -47,7 +47,10 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/problem+json";
-        await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken: cancellationToken);
+        await JsonSerializer.SerializeAsync(
+            httpContext.Response.Body,
+            problem,
+            cancellationToken: cancellationToken);
         return true;
     }
 
