@@ -34,6 +34,8 @@ export type TranslationKey =
   | 'emptyTitle'
   | 'emptyCopy'
   | 'emptyCta'
+  | 'closeCreate'
+  | 'openCreate'
   | 'noResultsTitle'
   | 'noResultsCopy'
   | 'clearFilters'
@@ -49,7 +51,10 @@ export type TranslationKey =
   | 'minutesAgo'
   | 'hoursAgo'
   | 'daysAgo'
-  | 'dismiss';
+  | 'dismiss'
+  | 'notifyCreated'
+  | 'notifyStatusUpdated'
+  | 'notifyError';
 
 const EN: Record<TranslationKey, string> = {
   appTitle: 'Work Items',
@@ -83,6 +88,8 @@ const EN: Record<TranslationKey, string> = {
   emptyTitle: 'No items yet.',
   emptyCopy: 'Create your first work item above.',
   emptyCta: 'Add an item',
+  closeCreate: 'Close create form',
+  openCreate: 'New item',
   noResultsTitle: 'No results for your filters.',
   noResultsCopy: 'Try a different search or status.',
   clearFilters: 'Clear filters',
@@ -99,6 +106,9 @@ const EN: Record<TranslationKey, string> = {
   hoursAgo: '{n}h ago',
   daysAgo: '{n}d ago',
   dismiss: 'Dismiss',
+  notifyCreated: 'Work item created.',
+  notifyStatusUpdated: 'Status updated.',
+  notifyError: 'Something went wrong.',
 };
 
 const AR: Record<TranslationKey, string> = {
@@ -133,6 +143,8 @@ const AR: Record<TranslationKey, string> = {
   emptyTitle: 'لا توجد عناصر بعد.',
   emptyCopy: 'أنشئ أول عنصر من النموذج أعلاه.',
   emptyCta: 'أضف عنصرًا',
+  closeCreate: 'إغلاق نموذج الإنشاء',
+  openCreate: 'عنصر جديد',
   noResultsTitle: 'لا نتائج لفلاترك.',
   noResultsCopy: 'جرّب بحثًا أو حالة مختلفة.',
   clearFilters: 'مسح الفلاتر',
@@ -149,6 +161,9 @@ const AR: Record<TranslationKey, string> = {
   hoursAgo: 'منذ {n} س',
   daysAgo: 'منذ {n} ي',
   dismiss: 'إغلاق',
+  notifyCreated: 'تم إنشاء عنصر العمل.',
+  notifyStatusUpdated: 'تم تحديث الحالة.',
+  notifyError: 'حدث خطأ ما.',
 };
 
 const STORAGE_KEY = 'work-item-tracker-locale';

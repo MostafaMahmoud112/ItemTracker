@@ -70,6 +70,12 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+
+    // wipe + load realistic sample rows when the table is empty (fresh DB / first run)
+    if (!await db.WorkItems.AnyAsync())
+    {
+        await DbSeeder.ResetWithSampleDataAsync(db);
+    }
 }
 
 app.UseCors();

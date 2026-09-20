@@ -19,6 +19,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { PagedResult, WorkItem, WorkItemStatus } from '../models/work-item.model';
 import { WorkItemService } from '../services/work-item.service';
 import { ThemeService } from '../theme/theme.service';
+import { NotificationService } from '../_interceptors/notification.service';
 
 export type ListViewState =
   | { kind: 'loading' }
@@ -37,8 +38,11 @@ export class WorkItemsComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly theme = inject(ThemeService);
   readonly i18n = inject(I18nService);
+  readonly notifications = inject(NotificationService);
 
   @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
+
+  createPanelOpen = true;
 
   readonly titleMaxLength = 120;
   readonly pageSize = 10;
@@ -59,7 +63,6 @@ export class WorkItemsComponent {
 
   private readonly page$ = new BehaviorSubject<number>(1);
   private readonly refresh$ = new BehaviorSubject<number>(0);
-  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly listState$: Observable<ListViewState> = combineLatest([
     this.searchControl.valueChanges.pipe(
@@ -106,8 +109,6 @@ export class WorkItemsComponent {
     }),
   );
 
-  createError: string | null = null;
-  toastMessage: string | null = null;
   submitting = false;
   readonly advancingIds = new Set<number>();
 
@@ -115,9 +116,6 @@ export class WorkItemsComponent {
     this.destroyRef.onDestroy(() => {
       this.page$.complete();
       this.refresh$.complete();
-      if (this.toastTimer) {
-        clearTimeout(this.toastTimer);
-      }
     });
   }
 
@@ -219,7 +217,6 @@ export class WorkItemsComponent {
   }
 
   onSubmit(): void {
-    this.createError = null;
     this.createForm.markAllAsTouched();
 
     if (this.createForm.invalid || this.submitting) {
@@ -245,8 +242,8 @@ export class WorkItemsComponent {
           this.createForm.reset({ title: '', description: '' });
           this.refreshList();
         },
-        error: (error: Error) => {
-          this.createError = error.message;
+        error: () => {
+          // server errors are surfaced by the notification interceptor
         },
       });
   }
@@ -272,7 +269,6 @@ export class WorkItemsComponent {
       .subscribe({
         next: () => this.refreshList(),
         error: (error: Error & { status?: number }) => {
-          this.showToast(error.message);
           if (error.status === 409 || error.status === 404) {
             this.refreshList();
           }
@@ -290,30 +286,21 @@ export class WorkItemsComponent {
   }
 
   focusTitleInput(): void {
-    this.titleInput?.nativeElement.focus();
+    this.openCreatePanel();
+  }
+
+  openCreatePanel(): void {
+    this.createPanelOpen = true;
+    queueMicrotask(() => this.titleInput?.nativeElement.focus());
+  }
+
+  closeCreatePanel(): void {
+    this.createPanelOpen = false;
+    this.createForm.reset({ title: '', description: '' });
   }
 
   setStatus(value: 'All' | WorkItemStatus): void {
     this.statusControl.setValue(value);
-  }
-
-  showToast(message: string): void {
-    this.toastMessage = message;
-    if (this.toastTimer) {
-      clearTimeout(this.toastTimer);
-    }
-    this.toastTimer = setTimeout(() => {
-      this.toastMessage = null;
-      this.toastTimer = null;
-    }, 4000);
-  }
-
-  dismissToast(): void {
-    this.toastMessage = null;
-    if (this.toastTimer) {
-      clearTimeout(this.toastTimer);
-      this.toastTimer = null;
-    }
   }
 
   goToPreviousPage(): void {

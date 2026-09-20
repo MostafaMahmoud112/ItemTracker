@@ -33,6 +33,16 @@
           </button>
         </div>
 
+        @if (!createPanelOpen) {
+          <button
+            type="button"
+            class="btn btn--primary btn--compact"
+            (click)="openCreatePanel()"
+          >
+            {{ 'openCreate' | t }}
+          </button>
+        }
+
         <button
           type="button"
           class="icon-btn"
@@ -44,72 +54,78 @@
       </div>
     </header>
 
-    <div class="layout">
-      <section class="card" aria-labelledby="create-heading">
-        <h2 id="create-heading">{{ 'createHeading' | t }}</h2>
+    <div class="layout" [class.layout--split]="createPanelOpen">
+      @if (createPanelOpen) {
+        <section class="card card--create" aria-labelledby="create-heading">
+          <div class="card__header">
+            <h2 id="create-heading">{{ 'createHeading' | t }}</h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--ghost"
+              (click)="closeCreatePanel()"
+              [attr.aria-label]="'closeCreate' | t"
+            >
+              <app-icon name="clear" />
+            </button>
+          </div>
 
-        <form class="create-form" [formGroup]="createForm" (ngSubmit)="onSubmit()" novalidate>
-          <div class="field">
-            <label for="title">{{ 'title' | t }}</label>
-            <input
-              #titleInput
-              id="title"
-              type="text"
-              formControlName="title"
-              maxlength="120"
-              autocomplete="off"
-              [placeholder]="'titlePlaceholder' | t"
-              [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
-              [attr.aria-describedby]="
-                titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'
-              "
-            />
-            <div class="field__meta">
-              <p id="title-hint" class="hint" [class]="'hint hint--' + titleCounterTone">
-                {{ 'charsRemaining' | t: { n: remainingTitleChars } }}
-              </p>
-              @if (titleControl.invalid && titleControl.touched) {
-                <p id="title-error" class="field-error" role="alert">
-                  <app-icon name="alert" />
-                  @if (titleControl.hasError('required')) {
-                    {{ 'titleRequired' | t }}
-                  } @else if (titleControl.hasError('maxlength')) {
-                    {{ 'titleMax' | t }}
-                  }
+          <form class="create-form" [formGroup]="createForm" (ngSubmit)="onSubmit()" novalidate>
+            <div class="field">
+              <label for="title">{{ 'title' | t }}</label>
+              <input
+                #titleInput
+                id="title"
+                type="text"
+                formControlName="title"
+                maxlength="120"
+                autocomplete="off"
+                [placeholder]="'titlePlaceholder' | t"
+                [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
+                [attr.aria-describedby]="
+                  titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'
+                "
+              />
+              <div class="field__meta">
+                <p id="title-hint" class="hint" [class]="'hint hint--' + titleCounterTone">
+                  {{ 'charsRemaining' | t: { n: remainingTitleChars } }}
                 </p>
-              }
+                @if (titleControl.invalid && titleControl.touched) {
+                  <p id="title-error" class="field-error" role="alert">
+                    <app-icon name="alert" />
+                    @if (titleControl.hasError('required')) {
+                      {{ 'titleRequired' | t }}
+                    } @else if (titleControl.hasError('maxlength')) {
+                      {{ 'titleMax' | t }}
+                    }
+                  </p>
+                }
+              </div>
             </div>
-          </div>
 
-          <div class="field">
-            <label for="description">
-              {{ 'description' | t }} <span class="optional">{{ 'optional' | t }}</span>
-            </label>
-            <textarea
-              id="description"
-              rows="3"
-              formControlName="description"
-              [placeholder]="'descriptionPlaceholder' | t"
-            ></textarea>
-          </div>
+            <div class="field">
+              <label for="description">
+                {{ 'description' | t }} <span class="optional">{{ 'optional' | t }}</span>
+              </label>
+              <textarea
+                id="description"
+                rows="3"
+                cols="1"
+                formControlName="description"
+                [placeholder]="'descriptionPlaceholder' | t"
+              ></textarea>
+            </div>
 
-          @if (createError) {
-            <p class="field-error" role="alert">
-              <app-icon name="alert" />
-              {{ createError }}
-            </p>
-          }
-
-          <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid || submitting">
-            @if (submitting) {
-              <app-icon name="spinner" />
-              <span>{{ 'creating' | t }}</span>
-            } @else {
-              <span>{{ 'create' | t }}</span>
-            }
-          </button>
-        </form>
-      </section>
+            <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid || submitting">
+              @if (submitting) {
+                <app-icon name="spinner" />
+                <span>{{ 'creating' | t }}</span>
+              } @else {
+                <span>{{ 'create' | t }}</span>
+              }
+            </button>
+          </form>
+        </section>
+      }
 
       <section class="card card--list" aria-labelledby="list-heading">
         <div class="list-header">
@@ -297,11 +313,11 @@
     </div>
   </section>
 
-  @if (toastMessage) {
-    <div class="toast" role="status" aria-live="polite">
-      <app-icon name="alert" />
-      <p>{{ toastMessage }}</p>
-      <button type="button" class="toast__dismiss" (click)="dismissToast()" [attr.aria-label]="'dismiss' | t">
+  @if (notifications.current(); as toast) {
+    <div class="toast" [class.toast--success]="toast.tone === 'success'" [class.toast--error]="toast.tone === 'error'" role="status" aria-live="polite">
+      <app-icon [name]="toast.tone === 'success' ? 'check' : 'alert'" />
+      <p>{{ toast.message }}</p>
+      <button type="button" class="toast__dismiss" (click)="notifications.dismiss()" [attr.aria-label]="'dismiss' | t">
         <app-icon name="clear" />
       </button>
     </div>
