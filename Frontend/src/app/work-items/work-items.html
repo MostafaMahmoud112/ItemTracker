@@ -15,40 +15,24 @@
 
       <div class="topbar__actions">
         <div class="lang" role="group" [attr.aria-label]="'statusFilter' | t">
-          <button
-            type="button"
-            class="lang__btn"
-            [class.lang__btn--active]="i18n.locale() === 'en'"
-            (click)="i18n.setLocale('en')"
-          >
+          <button type="button" class="lang__btn" [class.lang__btn--active]="i18n.locale() === 'en'"
+            (click)="i18n.setLocale('en')">
             EN
           </button>
-          <button
-            type="button"
-            class="lang__btn"
-            [class.lang__btn--active]="i18n.locale() === 'ar'"
-            (click)="i18n.setLocale('ar')"
-          >
+          <button type="button" class="lang__btn" [class.lang__btn--active]="i18n.locale() === 'ar'"
+            (click)="i18n.setLocale('ar')">
             ع
           </button>
         </div>
 
         @if (!createPanelOpen) {
-          <button
-            type="button"
-            class="btn btn--primary btn--compact"
-            (click)="openCreatePanel()"
-          >
-            {{ 'openCreate' | t }}
-          </button>
+        <button type="button" class="btn btn--primary btn--compact" (click)="openCreatePanel()">
+          {{ 'openCreate' | t }}
+        </button>
         }
 
-        <button
-          type="button"
-          class="icon-btn"
-          (click)="theme.toggle()"
-          [attr.aria-label]="theme.mode() === 'dark' ? ('themeToLight' | t) : ('themeToDark' | t)"
-        >
+        <button type="button" class="icon-btn" (click)="theme.toggle()"
+          [attr.aria-label]="theme.mode() === 'dark' ? ('themeToLight' | t) : ('themeToDark' | t)">
           <app-icon [name]="theme.mode() === 'dark' ? 'sun' : 'moon'" />
         </button>
       </div>
@@ -56,75 +40,58 @@
 
     <div class="layout" [class.layout--split]="createPanelOpen">
       @if (createPanelOpen) {
-        <section class="card card--create" aria-labelledby="create-heading">
-          <div class="card__header">
-            <h2 id="create-heading">{{ 'createHeading' | t }}</h2>
-            <button
-              type="button"
-              class="icon-btn icon-btn--ghost"
-              (click)="closeCreatePanel()"
-              [attr.aria-label]="'closeCreate' | t"
-            >
-              <app-icon name="clear" />
-            </button>
+      <section class="card card--create" aria-labelledby="create-heading">
+        <div class="card__header">
+          <h2 id="create-heading">{{ 'createHeading' | t }}</h2>
+          <button type="button" class="icon-btn icon-btn--ghost" (click)="closeCreatePanel()"
+            [attr.aria-label]="'closeCreate' | t">
+            <app-icon name="clear" />
+          </button>
+        </div>
+
+        <form class="create-form" [formGroup]="createForm" (ngSubmit)="onSubmit()" novalidate>
+          <div class="field">
+            <label for="title">{{ 'title' | t }}</label>
+            <input #titleInput id="title" type="text" formControlName="title" maxlength="120" autocomplete="off"
+              [placeholder]="'titlePlaceholder' | t" [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
+              [attr.aria-describedby]="
+                  titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'
+                " />
+            <div class="field__meta">
+              <p id="title-hint" class="hint" [class]="'hint hint--' + titleCounterTone">
+                {{ 'charsRemaining' | t: { n: remainingTitleChars } }}
+              </p>
+              @if (titleControl.invalid && titleControl.touched) {
+              <p id="title-error" class="field-error" role="alert">
+                <app-icon name="alert" />
+                @if (titleControl.hasError('required')) {
+                {{ 'titleRequired' | t }}
+                } @else if (titleControl.hasError('maxlength')) {
+                {{ 'titleMax' | t }}
+                }
+              </p>
+              }
+            </div>
           </div>
 
-          <form class="create-form" [formGroup]="createForm" (ngSubmit)="onSubmit()" novalidate>
-            <div class="field">
-              <label for="title">{{ 'title' | t }}</label>
-              <input
-                #titleInput
-                id="title"
-                type="text"
-                formControlName="title"
-                maxlength="120"
-                autocomplete="off"
-                [placeholder]="'titlePlaceholder' | t"
-                [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
-                [attr.aria-describedby]="
-                  titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'
-                "
-              />
-              <div class="field__meta">
-                <p id="title-hint" class="hint" [class]="'hint hint--' + titleCounterTone">
-                  {{ 'charsRemaining' | t: { n: remainingTitleChars } }}
-                </p>
-                @if (titleControl.invalid && titleControl.touched) {
-                  <p id="title-error" class="field-error" role="alert">
-                    <app-icon name="alert" />
-                    @if (titleControl.hasError('required')) {
-                      {{ 'titleRequired' | t }}
-                    } @else if (titleControl.hasError('maxlength')) {
-                      {{ 'titleMax' | t }}
-                    }
-                  </p>
-                }
-              </div>
-            </div>
+          <div class="field">
+            <label for="description">
+              {{ 'description' | t }} <span class="optional">{{ 'optional' | t }}</span>
+            </label>
+            <textarea id="description" rows="3" cols="1" formControlName="description"
+              [placeholder]="'descriptionPlaceholder' | t"></textarea>
+          </div>
 
-            <div class="field">
-              <label for="description">
-                {{ 'description' | t }} <span class="optional">{{ 'optional' | t }}</span>
-              </label>
-              <textarea
-                id="description"
-                rows="3"
-                cols="1"
-                formControlName="description"
-                [placeholder]="'descriptionPlaceholder' | t"
-              ></textarea>
-            </div>
-
-            <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid || submitting">
-              @if (submitting) {
-                <app-icon name="spinner" />
-                <span>{{ 'creating' | t }}</span>
-              } @else {
-                <span>{{ 'create' | t }}</span>
-              }
-            </button>
-          </form>
-        </section>
+          <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid || submitting">
+            @if (submitting) {
+            <app-icon name="spinner" />
+            <span>{{ 'creating' | t }}</span>
+            } @else {
+            <span>{{ 'create' | t }}</span>
+            }
+          </button>
+        </form>
+      </section>
       }
 
       <section class="card card--list" aria-labelledby="list-heading">
@@ -135,191 +102,156 @@
             <div class="search">
               <label class="sr-only" for="search">{{ 'search' | t }}</label>
               <span class="search__icon" aria-hidden="true"><app-icon name="search" /></span>
-              <input
-                id="search"
-                type="search"
-                [formControl]="searchControl"
-                [placeholder]="'searchPlaceholder' | t"
-                autocomplete="off"
-              />
+              <input id="search" type="search" [formControl]="searchControl" [placeholder]="'searchPlaceholder' | t"
+                autocomplete="off" />
               @if (searchControl.value) {
-                <button
-                  type="button"
-                  class="search__clear"
-                  (click)="clearSearch()"
-                  [attr.aria-label]="'clearSearch' | t"
-                >
-                  <app-icon name="clear" />
-                </button>
+              <button type="button" class="search__clear" (click)="clearSearch()" [attr.aria-label]="'clearSearch' | t">
+                <app-icon name="clear" />
+              </button>
               }
             </div>
 
             <div class="segments" role="group" [attr.aria-label]="'statusFilter' | t">
               @for (option of statusOptions; track option.value) {
-                <button
-                  type="button"
-                  class="segment"
-                  [class.segment--active]="statusControl.value === option.value"
-                  [attr.aria-pressed]="statusControl.value === option.value"
-                  (click)="setStatus(option.value)"
-                >
-                  {{ option.labelKey | t }}
-                </button>
+              <button type="button" class="segment" [class.segment--active]="statusControl.value === option.value"
+                [attr.aria-pressed]="statusControl.value === option.value" (click)="setStatus(option.value)">
+                {{ option.labelKey | t }}
+              </button>
               }
             </div>
           </div>
         </div>
 
         @if (listState$ | async; as state) {
-          @switch (state.kind) {
-            @case ('loading') {
-              <div class="state state--loading" role="status" aria-live="polite" aria-busy="true">
-                <p class="sr-only">{{ 'loading' | t }}</p>
-                <div class="skeleton-card" aria-hidden="true"></div>
-                <div class="skeleton-card" aria-hidden="true"></div>
-                <div class="skeleton-card" aria-hidden="true"></div>
-              </div>
-            }
-            @case ('error') {
-              <div class="alert alert--error" role="alert">
-                <app-icon name="alert" />
-                <div class="alert__body">
-                  <p>{{ state.message }}</p>
-                  <button type="button" class="btn btn--ghost" (click)="retry()">{{ 'retry' | t }}</button>
-                </div>
-              </div>
-            }
-            @case ('success') {
-              @if (state.result.totalCount === 0) {
-                <div class="empty" role="status">
-                  @if (state.filtersActive) {
-                    <div class="empty__icon" aria-hidden="true"><app-icon name="filter" /></div>
-                    <p class="empty__title">{{ 'noResultsTitle' | t }}</p>
-                    <p class="empty__copy">{{ 'noResultsCopy' | t }}</p>
-                    <button type="button" class="btn btn--ghost" (click)="clearFilters()">
-                      {{ 'clearFilters' | t }}
-                    </button>
-                  } @else {
-                    <div class="empty__icon" aria-hidden="true"><app-icon name="inbox" /></div>
-                    <p class="empty__title">{{ 'emptyTitle' | t }}</p>
-                    <p class="empty__copy">{{ 'emptyCopy' | t }}</p>
-                    <button type="button" class="btn btn--primary" (click)="focusTitleInput()">
-                      {{ 'emptyCta' | t }}
-                    </button>
-                  }
-                </div>
-              } @else {
-                <ul class="item-list" aria-label="Work item list">
-                  @for (item of state.result.items; track item.id) {
-                    <li class="item" [class.item--done]="item.status === 'Done'">
-                      <div class="item__main">
-                        <div class="item__title-row">
-                          <h3 [class.item__title--muted]="item.status === 'Done'">
-                            @if (item.status === 'Done') {
-                              <span class="item__check" aria-hidden="true"><app-icon name="check" /></span>
-                            }
-                            {{ item.title }}
-                          </h3>
-                          <span
-                            [class]="statusClass(item.status)"
-                            [attr.aria-label]="statusLabelKey(item.status) | t"
-                          >
-                            <span class="badge__dot" aria-hidden="true"></span>
-                            {{ statusLabelKey(item.status) | t }}
-                          </span>
-                        </div>
-
-                        @if (item.description) {
-                          <p class="item__description">{{ item.description }}</p>
-                        }
-
-                        <div class="item__meta-row">
-                          <div class="progress" aria-hidden="true">
-                            @for (step of [1, 2, 3]; track step) {
-                              <span
-                                class="progress__step"
-                                [class.progress__step--active]="progressStep(item.status) >= step"
-                                [class.progress__step--current]="progressStep(item.status) === step"
-                              ></span>
-                            }
-                          </div>
-                          <p class="item__meta">
-                            <time [attr.datetime]="item.createdAt">{{ formatCreatedAt(item.createdAt) }}</time>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div class="item__actions">
-                        @if (actionLabelKey(item.status); as labelKey) {
-                          <button
-                            type="button"
-                            class="btn btn--action"
-                            [disabled]="isAdvancing(item.id)"
-                            [attr.aria-busy]="isAdvancing(item.id)"
-                            (click)="onAdvance(item)"
-                          >
-                            @if (isAdvancing(item.id)) {
-                              <app-icon name="spinner" />
-                              <span>{{ 'updating' | t }}</span>
-                            } @else {
-                              <span>{{ labelKey | t }}</span>
-                              <app-icon name="arrow-right" />
-                            }
-                          </button>
-                        } @else {
-                          <button type="button" class="btn btn--action" disabled aria-disabled="true">
-                            {{ 'done' | t }}
-                          </button>
-                        }
-                      </div>
-                    </li>
-                  }
-                </ul>
-
-                <nav class="pagination" aria-label="Pagination">
-                  <button
-                    type="button"
-                    class="icon-btn"
-                    [disabled]="state.result.page <= 1"
-                    (click)="goToPreviousPage()"
-                    [attr.aria-label]="'previous' | t"
-                  >
-                    <app-icon name="chevron-left" />
-                    <span class="pagination__label">{{ 'previous' | t }}</span>
-                  </button>
-                  <p class="pagination__info">
-                    {{
-                      'pageOf'
-                        | t: { page: state.result.page, totalPages: state.result.totalPages || 1 }
-                    }}
-                    · {{ 'total' | t: { n: state.result.totalCount } }}
-                  </p>
-                  <button
-                    type="button"
-                    class="icon-btn"
-                    [disabled]="state.result.page >= state.result.totalPages"
-                    (click)="goToNextPage(state.result.totalPages)"
-                    [attr.aria-label]="'next' | t"
-                  >
-                    <span class="pagination__label">{{ 'next' | t }}</span>
-                    <app-icon name="chevron-right" />
-                  </button>
-                </nav>
-              }
-            }
+        @switch (state.kind) {
+        @case ('loading') {
+        <div class="state state--loading" role="status" aria-live="polite" aria-busy="true">
+          <p class="sr-only">{{ 'loading' | t }}</p>
+          <div class="skeleton-card" aria-hidden="true"></div>
+          <div class="skeleton-card" aria-hidden="true"></div>
+          <div class="skeleton-card" aria-hidden="true"></div>
+        </div>
+        }
+        @case ('error') {
+        <div class="alert alert--error" role="alert">
+          <app-icon name="alert" />
+          <div class="alert__body">
+            <p>{{ state.message }}</p>
+            <button type="button" class="btn btn--ghost" (click)="retry()">{{ 'retry' | t }}</button>
+          </div>
+        </div>
+        }
+        @case ('success') {
+        @if (state.result.totalCount === 0) {
+        <div class="empty" role="status">
+          @if (state.filtersActive) {
+          <div class="empty__icon" aria-hidden="true"><app-icon name="filter" /></div>
+          <p class="empty__title">{{ 'noResultsTitle' | t }}</p>
+          <p class="empty__copy">{{ 'noResultsCopy' | t }}</p>
+          <button type="button" class="btn btn--ghost" (click)="clearFilters()">
+            {{ 'clearFilters' | t }}
+          </button>
+          } @else {
+          <div class="empty__icon" aria-hidden="true"><app-icon name="inbox" /></div>
+          <p class="empty__title">{{ 'emptyTitle' | t }}</p>
+          <p class="empty__copy">{{ 'emptyCopy' | t }}</p>
+          <button type="button" class="btn btn--primary" (click)="focusTitleInput()">
+            {{ 'emptyCta' | t }}
+          </button>
           }
+        </div>
+        } @else {
+        <ul class="item-list" aria-label="Work item list">
+          @for (item of state.result.items; track item.id) {
+          <li class="item" [class.item--done]="item.status === 'Done'">
+            <div class="item__main">
+              <div class="item__title-row">
+                <h3 [class.item__title--muted]="item.status === 'Done'">
+                  @if (item.status === 'Done') {
+                  <span class="item__check" aria-hidden="true"><app-icon name="check" /></span>
+                  }
+                  {{ item.title }}
+                </h3>
+                <span [class]="statusClass(item.status)" [attr.aria-label]="statusLabelKey(item.status) | t">
+                  <span class="badge__dot" aria-hidden="true"></span>
+                  {{ statusLabelKey(item.status) | t }}
+                </span>
+              </div>
+
+              @if (item.description) {
+              <p class="item__description">{{ item.description }}</p>
+              }
+
+              <div class="item__meta-row">
+                <div class="progress" aria-hidden="true">
+                  @for (step of [1, 2, 3]; track step) {
+                  <span class="progress__step" [class.progress__step--active]="progressStep(item.status) >= step"
+                    [class.progress__step--current]="progressStep(item.status) === step"></span>
+                  }
+                </div>
+                <p class="item__meta">
+                  <time [attr.datetime]="item.createdAt">{{ formatCreatedAt(item.createdAt) }}</time>
+                </p>
+              </div>
+            </div>
+
+            <div class="item__actions">
+              @if (actionLabelKey(item.status); as labelKey) {
+              <button type="button" class="btn btn--action" [disabled]="isAdvancing(item.id)"
+                [attr.aria-busy]="isAdvancing(item.id)" (click)="onAdvance(item)">
+                @if (isAdvancing(item.id)) {
+                <app-icon name="spinner" />
+                <span>{{ 'updating' | t }}</span>
+                } @else {
+                <span>{{ labelKey | t }}</span>
+                <app-icon name="arrow-right" />
+                }
+              </button>
+              } @else {
+              <button type="button" class="btn btn--action" disabled aria-disabled="true">
+                {{ 'done' | t }}
+              </button>
+              }
+            </div>
+          </li>
+          }
+        </ul>
+
+        <nav class="pagination" aria-label="Pagination">
+          <button type="button" class="icon-btn" [disabled]="state.result.page <= 1" (click)="goToPreviousPage()"
+            [attr.aria-label]="'previous' | t">
+            <app-icon name="chevron-left" />
+            <span class="pagination__label">{{ 'previous' | t }}</span>
+          </button>
+          <p class="pagination__info">
+            {{
+            'pageOf'
+            | t: { page: state.result.page, totalPages: state.result.totalPages || 1 }
+            }}
+            · {{ 'total' | t: { n: state.result.totalCount } }}
+          </p>
+          <button type="button" class="icon-btn" [disabled]="state.result.page >= state.result.totalPages"
+            (click)="goToNextPage(state.result.totalPages)" [attr.aria-label]="'next' | t">
+            <span class="pagination__label">{{ 'next' | t }}</span>
+            <app-icon name="chevron-right" />
+          </button>
+        </nav>
+        }
+        }
+        }
         }
       </section>
     </div>
   </section>
 
   @if (notifications.current(); as toast) {
-    <div class="toast" [class.toast--success]="toast.tone === 'success'" [class.toast--error]="toast.tone === 'error'" role="status" aria-live="polite">
-      <app-icon [name]="toast.tone === 'success' ? 'check' : 'alert'" />
-      <p>{{ toast.message }}</p>
-      <button type="button" class="toast__dismiss" (click)="notifications.dismiss()" [attr.aria-label]="'dismiss' | t">
-        <app-icon name="clear" />
-      </button>
-    </div>
+  <div class="toast" [class.toast--success]="toast.tone === 'success'" [class.toast--error]="toast.tone === 'error'"
+    role="status" aria-live="polite">
+    <app-icon [name]="toast.tone === 'success' ? 'check' : 'alert'" />
+    <p>{{ toast.message }}</p>
+    <button type="button" class="toast__dismiss" (click)="notifications.dismiss()" [attr.aria-label]="'dismiss' | t">
+      <app-icon name="clear" />
+    </button>
+  </div>
   }
 </div>
