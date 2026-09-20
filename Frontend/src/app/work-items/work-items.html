@@ -1,0 +1,178 @@
+<section class="page" aria-labelledby="page-title">
+  <header class="page__header">
+    <h1 id="page-title">Work Items</h1>
+    <p class="page__subtitle">Track tasks from Todo to Done.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="create-heading">
+    <h2 id="create-heading">Create work item</h2>
+
+    <form class="create-form" [formGroup]="createForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="field">
+        <label for="title">Title</label>
+        <input
+          id="title"
+          type="text"
+          formControlName="title"
+          maxlength="120"
+          autocomplete="off"
+          [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
+          [attr.aria-describedby]="titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'"
+        />
+        <div class="field__meta">
+          <p id="title-hint" class="hint">{{ remainingTitleChars }} characters remaining</p>
+          @if (titleControl.invalid && titleControl.touched) {
+            <p id="title-error" class="error" role="alert">
+              @if (titleControl.hasError('required')) {
+                Title is required.
+              } @else if (titleControl.hasError('maxlength')) {
+                Title must be at most 120 characters.
+              }
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="description">Description <span class="optional">(optional)</span></label>
+        <textarea id="description" rows="3" formControlName="description"></textarea>
+      </div>
+
+      @if (createError) {
+        <p class="error" role="alert">{{ createError }}</p>
+      }
+
+      <button type="submit" class="btn btn--primary" [disabled]="createForm.invalid || submitting">
+        {{ submitting ? 'Creating…' : 'Create' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="list-heading">
+    <div class="list-header">
+      <h2 id="list-heading">Items</h2>
+
+      <div class="filters">
+        <div class="field field--inline">
+          <label for="search">Search</label>
+          <input
+            id="search"
+            type="search"
+            [formControl]="searchControl"
+            placeholder="Filter by title"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field field--inline">
+          <label for="status">Status</label>
+          <select id="status" [formControl]="statusControl">
+            <option value="All">All</option>
+            <option value="Todo">Todo</option>
+            <option value="InProgress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    @if (actionError) {
+      <p class="error" role="alert">{{ actionError }}</p>
+    }
+
+    @if (listState$ | async; as state) {
+      @switch (state.kind) {
+        @case ('loading') {
+          <div class="state state--loading" role="status" aria-live="polite" aria-busy="true">
+            <div class="skeleton" aria-hidden="true"></div>
+            <div class="skeleton" aria-hidden="true"></div>
+            <div class="skeleton" aria-hidden="true"></div>
+            <p>Loading work items…</p>
+          </div>
+        }
+        @case ('error') {
+          <div class="state state--error" role="alert">
+            <p>{{ state.message }}</p>
+            <button type="button" class="btn" (click)="retry()">Retry</button>
+          </div>
+        }
+        @case ('success') {
+          @if (state.result.totalCount === 0) {
+            <div class="state state--empty" role="status">
+              @if (state.filtersActive) {
+                <p>No results for your filters.</p>
+              } @else {
+                <p>No items yet. Create your first work item above.</p>
+              }
+            </div>
+          } @else {
+            <ul class="item-list" aria-label="Work item list">
+              @for (item of state.result.items; track trackById($index, item)) {
+                <li class="item">
+                  <div class="item__main">
+                    <div class="item__title-row">
+                      <h3>{{ item.title }}</h3>
+                      <span [class]="statusClass(item.status)" [attr.aria-label]="'Status: ' + item.status">
+                        {{ item.status }}
+                      </span>
+                    </div>
+                    @if (item.description) {
+                      <p class="item__description">{{ item.description }}</p>
+                    }
+                    <p class="item__meta">
+                      Created
+                      <time [attr.datetime]="item.createdAt">
+                        {{ item.createdAt | date: 'medium' }}
+                      </time>
+                    </p>
+                  </div>
+
+                  <div class="item__actions">
+                    @if (actionLabel(item.status); as label) {
+                      <button
+                        type="button"
+                        class="btn"
+                        [disabled]="isAdvancing(item.id)"
+                        [attr.aria-busy]="isAdvancing(item.id)"
+                        (click)="onAdvance(item)"
+                      >
+                        {{ isAdvancing(item.id) ? 'Updating…' : label }}
+                      </button>
+                    } @else {
+                      <button type="button" class="btn" disabled aria-disabled="true">
+                        Done
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+
+            <nav class="pagination" aria-label="Pagination">
+              <button
+                type="button"
+                class="btn"
+                [disabled]="state.result.page <= 1"
+                (click)="goToPreviousPage()"
+              >
+                Previous
+              </button>
+              <p class="pagination__info">
+                Page {{ state.result.page }} of {{ state.result.totalPages || 1 }}
+                · {{ state.result.totalCount }} total
+              </p>
+              <button
+                type="button"
+                class="btn"
+                [disabled]="state.result.page >= state.result.totalPages"
+                (click)="goToNextPage(state.result.totalPages)"
+              >
+                Next
+              </button>
+            </nav>
+          }
+        }
+      }
+    }
+  </section>
+</section>
