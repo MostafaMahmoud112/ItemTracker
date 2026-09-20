@@ -54,17 +54,19 @@ describe('WorkItemsComponent', () => {
     const slowItems = [item({ id: 1, title: 'Slow Result', status: 'Todo' })];
     const fastItems = [item({ id: 2, title: 'Fast Result', status: 'Todo' })];
 
-    getWorkItems.mockImplementation((query: { search?: string }): Observable<PagedResult<WorkItem>> => {
-      if (query.search === 'alpha') {
-        return timer(200).pipe(map(() => pageOf(slowItems)));
-      }
+    getWorkItems.mockImplementation(
+      (query: { search?: string }): Observable<PagedResult<WorkItem>> => {
+        if (query.search === 'alpha') {
+          return timer(200).pipe(map(() => pageOf(slowItems)));
+        }
 
-      if (query.search === 'beta') {
-        return of(pageOf(fastItems));
-      }
+        if (query.search === 'beta') {
+          return of(pageOf(fastItems));
+        }
 
-      return of(pageOf([]));
-    });
+        return of(pageOf([]));
+      },
+    );
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -138,8 +140,10 @@ describe('WorkItemsComponent', () => {
 
     expect(buttons).toEqual(['Start', 'Complete', 'Done']);
     expect(
-      (fixture.debugElement.queryAll(By.css('.item__actions .btn'))[2]
-        .nativeElement as HTMLButtonElement).disabled,
+      (
+        fixture.debugElement.queryAll(By.css('.item__actions .btn'))[2]
+          .nativeElement as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
   });
 });

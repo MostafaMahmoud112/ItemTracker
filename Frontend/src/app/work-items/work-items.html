@@ -17,7 +17,9 @@
           maxlength="120"
           autocomplete="off"
           [attr.aria-invalid]="titleControl.invalid && titleControl.touched"
-          [attr.aria-describedby]="titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'"
+          [attr.aria-describedby]="
+            titleControl.invalid && titleControl.touched ? 'title-error title-hint' : 'title-hint'
+          "
         />
         <div class="field__meta">
           <p id="title-hint" class="hint">{{ remainingTitleChars }} characters remaining</p>
@@ -107,12 +109,15 @@
             </div>
           } @else {
             <ul class="item-list" aria-label="Work item list">
-              @for (item of state.result.items; track trackById($index, item)) {
+              @for (item of state.result.items; track item.id) {
                 <li class="item">
                   <div class="item__main">
                     <div class="item__title-row">
                       <h3>{{ item.title }}</h3>
-                      <span [class]="statusClass(item.status)" [attr.aria-label]="'Status: ' + item.status">
+                      <span
+                        [class]="statusClass(item.status)"
+                        [attr.aria-label]="'Status: ' + item.status"
+                      >
                         {{ item.status }}
                       </span>
                     </div>
@@ -139,9 +144,7 @@
                         {{ isAdvancing(item.id) ? 'Updating…' : label }}
                       </button>
                     } @else {
-                      <button type="button" class="btn" disabled aria-disabled="true">
-                        Done
-                      </button>
+                      <button type="button" class="btn" disabled aria-disabled="true">Done</button>
                     }
                   </div>
                 </li>
@@ -158,8 +161,8 @@
                 Previous
               </button>
               <p class="pagination__info">
-                Page {{ state.result.page }} of {{ state.result.totalPages || 1 }}
-                · {{ state.result.totalCount }} total
+                Page {{ state.result.page }} of {{ state.result.totalPages || 1 }} ·
+                {{ state.result.totalCount }} total
               </p>
               <button
                 type="button"

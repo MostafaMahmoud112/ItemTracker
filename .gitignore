@@ -29,7 +29,7 @@ TestResults/
 
 ## Logs / IDE / OS
 *.log
+## IDE
+.vscode/
 .idea/
-.DS_Store
-Thumbs.db
-appsettings.*.local.json
+.history/

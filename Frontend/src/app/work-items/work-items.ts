@@ -76,13 +76,11 @@ export class WorkItemsComponent {
           pageSize: this.pageSize,
         })
         .pipe(
-          map(
-            (result): ListViewState => ({
-              kind: 'success',
-              result,
-              filtersActive,
-            }),
-          ),
+          map((result): ListViewState => ({
+            kind: 'success',
+            result,
+            filtersActive,
+          })),
           startWith({ kind: 'loading' } satisfies ListViewState),
           catchError((error: Error) =>
             of({ kind: 'error', message: error.message } satisfies ListViewState),
@@ -212,10 +210,6 @@ export class WorkItemsComponent {
 
   refreshList(): void {
     this.refresh$.next(this.refresh$.value + 1);
-  }
-
-  trackById(_index: number, item: WorkItem): number {
-    return item.id;
   }
 
   statusClass(status: WorkItemStatus): string {
