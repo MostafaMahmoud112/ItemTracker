@@ -1,6 +1,14 @@
+## Node / Angular
+node_modules/
+Frontend/dist/
+Frontend/.angular/
+Frontend/coverage/
+
 ## .NET
 bin/
 obj/
+Backend/**/bin/
+Backend/**/obj/
 *.user
 *.suo
 *.userosscache
