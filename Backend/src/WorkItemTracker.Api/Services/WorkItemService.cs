@@ -112,5 +112,4 @@ public sealed class WorkItemService : IWorkItemService
         Status = entity.Status,
         CreatedAt = entity.CreatedAt
     };
-
 }

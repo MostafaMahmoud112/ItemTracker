@@ -1,5 +1,5 @@
 import { AsyncPipe, DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BehaviorSubject, Observable, combineLatest, of } from 'rxjs';
@@ -27,7 +27,7 @@ export type ListViewState =
   templateUrl: './work-items.html',
   styleUrl: './work-items.scss',
 })
-export class WorkItemsComponent implements OnInit {
+export class WorkItemsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly workItemsApi = inject(WorkItemService);
   private readonly destroyRef = inject(DestroyRef);
@@ -96,7 +96,7 @@ export class WorkItemsComponent implements OnInit {
   submitting = false;
   readonly advancingIds = new Set<number>();
 
-  ngOnInit(): void {
+  constructor() {
     this.destroyRef.onDestroy(() => {
       this.page$.complete();
       this.refresh$.complete();

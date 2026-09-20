@@ -1,24 +1,35 @@
 ## Node / Angular
 node_modules/
+**/node_modules/
 Frontend/dist/
 Frontend/.angular/
 Frontend/coverage/
+dist/
+.angular/
+coverage/
 
 ## .NET
 bin/
 obj/
-Backend/**/bin/
-Backend/**/obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 .vs/
+TestResults/
+*.DotSettings.user
+
+## Databases / local data
 *.db
 *.db-shm
 *.db-wal
-appsettings.*.local.json
-TestResults/
+**/workitems.db*
+
+## Logs / IDE / OS
 *.log
 .idea/
-*.DotSettings.user
+.DS_Store
+Thumbs.db
+appsettings.*.local.json

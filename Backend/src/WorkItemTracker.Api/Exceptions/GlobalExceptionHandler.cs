@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using WorkItemTracker.Api.Exceptions;
 
 namespace WorkItemTracker.Api.Exceptions;
 
